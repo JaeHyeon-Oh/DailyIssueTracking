@@ -17,8 +17,6 @@ def jwt_get_username_from_payload(payload):
     """
     Override this function if user_id is formatted differently in payload
     """
-    print('확인')
-    print(payload)
     return payload.get('username')
 
 
@@ -41,7 +39,6 @@ def jwt_get_username_from_payload(payload):
 #         algorithms=[settings.JWT_ALG]
 #     )
 def jwt_decode_handler(token):
-    print('해독가능?')
     options = {
         'verify_exp': False,
     }
@@ -75,8 +72,6 @@ class BaseJSONWebTokenAuthentication(BaseAuthentication):
 
         try:
             payload = jwt_decode_handler(jwt_value)
-            print('페이로드')
-            print(payload)
         except jwt.ExpiredSignatureError:
             msg = _('Signature has expired.')
             raise exceptions.AuthenticationFailed(msg)
@@ -123,10 +118,8 @@ class JSONWebTokenAuthentication(BaseJSONWebTokenAuthentication):
         Authorization: JWT eyJhbGciOiAiSFMyNTYiLCAidHlwIj
     """
     www_authenticate_realm = 'api'
-    print('제이더블유')
     def get_jwt_value(self, request):
         auth = get_authorization_header(request).split()
-        print('오뜨')
         if not auth:
             return None
 

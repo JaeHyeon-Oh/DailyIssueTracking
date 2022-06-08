@@ -1,3 +1,4 @@
+from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework import status, generics
 from rest_framework.response import Response
@@ -10,6 +11,8 @@ from .serializers import (
 )
 
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
+jwt_obtain_response_payload_handler=api_settings.JWT_OBTAIN_RESPONSE_PAYLOAD_HANDLER
+jwt_verify_response_payload_handler=api_settings.JWT_VERIFY_RESPONSE_PAYLOAD_HANDLER
 
 import datetime
 from slack_sdk.web import WebClient
@@ -27,9 +30,13 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from datetime import datetime
+from .serializers import UserSerializer
 
 
-
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    name='user-list'
 
 class BackList(APIView):
     permission_classes = (permissions.AllowAny,)
@@ -61,16 +68,7 @@ class BackList(APIView):
             )
             return Response({"username": username, "name": name}, status=status.HTTP_201_CREATED)
         else:
-            print(username)
-            print(name)
             return Response({"username": username, "name": name}, status=status.HTTP_202_ACCEPTED)
-        # if created:
-        #     User.objects.filter(username=username).update(
-        #         email=email,
-        #         name=name,
-        #         picture=picture,
-        #     )
-        #     return Response({"username": username,"name":name},status=status.HTTP_201_CREATED)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -108,14 +106,20 @@ class JSONWebTokenAPIView(APIView):
         serializer=JSONWebTokenSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.object.get('user') or request.user
-            token = serializer.object.get('token')
-            response_data = jwt_response_payload_handler(token, user, request)
+            access_token = serializer.object.get('access_token')
+            refresh_token=serializer.object.get('refresh_token')
+            exp=serializer.object.get('exp')
+
+            response_data = jwt_obtain_response_payload_handler(access_token,refresh_token,exp, user, request)
+            # response_data = jwt_response_payload_handler(access_token, user, request)
+
             response = Response(response_data)
             if api_settings.JWT_AUTH_COOKIE:
                 expiration = (datetime.utcnow() +
                               api_settings.JWT_EXPIRATION_DELTA)
                 response.set_cookie(api_settings.JWT_AUTH_COOKIE,
-                                    token,
+                                    access_token,
+                                    refresh_token,
                                     expires=expiration,
                                     httponly=True)
             return response
@@ -145,10 +149,10 @@ class VerifyJSONWebToken(APIView):
     def post(self, request, *args, **kwargs):
         serializer=VerifyJSONWebTokenSerializer(data=request.data)
         if serializer.is_valid():
-            print('확인')
             user = serializer.object.get('user') or request.user
             token = serializer.object.get('token')
-            response_data = jwt_response_payload_handler(token, user, request)
+            exp = serializer.object.get('exp')
+            response_data = jwt_verify_response_payload_handler(token, exp, user, request)
             response = Response(response_data)
             if api_settings.JWT_AUTH_COOKIE:
                 expiration = (datetime.utcnow() +
@@ -174,7 +178,6 @@ class RefreshJSONWebToken(APIView):
     def post(self, request, *args, **kwargs):
         serializer= RefreshJSONWebTokenSerializer(data=request.data)
         if serializer.is_valid():
-            print('확인')
             user = serializer.object.get('user') or request.user
             token = serializer.object.get('token')
             response_data = jwt_response_payload_handler(token, user, request)

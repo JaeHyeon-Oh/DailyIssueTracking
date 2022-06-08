@@ -1,43 +1,19 @@
 from django.db import models
 from ITSJwt.models import User
+from django.db.models import Max
 
 
 class Project(models.Model):
     project_id= models.AutoField(primary_key=True,unique=True)
     project_name=models.CharField(max_length=50)
-
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='owned_projects')
 
 class Board(models.Model):
     board_id= models.AutoField(primary_key=True,unique=True)
     project =models.ForeignKey(Project, related_name='board', on_delete=models.CASCADE)
-    title=models.CharField(max_length=10, blank=False, null=False)
-
-
-class Issue(models.Model):
-    FAST = 'F'
-    MEDIUM='M'
-    SLOW = 'S'
-    #(a,b) a->DB, b->API
-    PRIORITY_CHOICES = (
-        (FAST, '긴급'),
-        (MEDIUM, '보통'),
-        (SLOW, '여유'),
-    )
-
-    issue_id= models.AutoField(primary_key=True, unique=True)
-    user =models.ForeignKey(User,related_name='issue',  on_delete=models.CASCADE)
-    board =models.ForeignKey(Board, related_name='issue', on_delete=models.CASCADE)
-    title=models.CharField(max_length=100)
-    content = models.TextField()
-    deadline = models.DateTimeField(auto_now=False)
-    priority = models.CharField(
-        max_length=2,
-        choices=PRIORITY_CHOICES,
-        default=MEDIUM,
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
+    state=models.CharField(max_length=10, blank=False, null=False)
+    order=models.IntegerField()
 
 #부서(IT실,경영지원,브랜드 전략,여신 관리)
 class Department(models.Model):
@@ -59,7 +35,65 @@ class Department(models.Model):
         default=IT,
     )
 
+class ResponsibleIssue(models.Model):
+    responsible_issue_id=models.AutoField(primary_key=True,unique=True)
+    # user = models.ManyToManyField(User,related_name='responsibleIssue')
+    department=models.ForeignKey(Department,related_name='responsibleIssue', on_delete=models.CASCADE)
+    responsible_issue_name=models.CharField(max_length=50)
+    def __str__(self):
+        return self.responsible_issue_name
 
+class Responsibility(models.Model):
+
+    user = models.ForeignKey(User,related_name='responsibility', on_delete=models.CASCADE)
+    responsible_issue=models.ForeignKey(ResponsibleIssue,on_delete=models.CASCADE)
+    order=models.IntegerField(default=3)
+
+
+
+
+class Issue(models.Model):
+    FAST = 'F'
+    MEDIUM='M'
+    SLOW = 'S'
+    #(a,b) a->DB, b->API
+    PRIORITY_CHOICES = (
+        (FAST, '긴급'),
+        (MEDIUM, '보통'),
+        (SLOW, '여유'),
+    )
+
+    issue_id= models.AutoField(primary_key=True, unique=True)
+    reporter =models.ForeignKey(User,related_name='issue',  on_delete=models.CASCADE)
+    # reporter=models.CharField(max_length=100)
+    # responsibility= models.ManyToManyField(Responsibility,related_name='issue')
+    board =models.ForeignKey(Board, related_name='issue', on_delete=models.CASCADE)
+    responsibleIssue =models.ForeignKey(ResponsibleIssue, related_name='issue', on_delete=models.CASCADE)
+
+    title=models.CharField(max_length=100)
+    content = models.TextField()
+    # deadline = models.DateTimeField(auto_now=False)
+    deadline=models.CharField(max_length=20)
+    priority = models.CharField(
+        max_length=2,
+        choices=PRIORITY_CHOICES,
+        default=MEDIUM,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # def save(self, *args, **kwargs):
+    #     filtered_objects = Issue.objects.filter(board=self.board)
+    #     if not self.order and filtered_objects.count() == 0:
+    #         self.order = 1
+    #     elif not self.order:
+    #         self.order = filtered_objects.aggregate(Max('order'))[
+    #             'order__max'] +1
+    #     return super().save(*args, **kwargs)
+
+class Assignee(models.Model):
+    user = models.ForeignKey(User,related_name='assignee', on_delete=models.CASCADE)
+    issue=models.ForeignKey(Issue,related_name='assignee', on_delete=models.CASCADE)
+    mension=models.BooleanField(default=False)
 
 
 
@@ -69,28 +103,21 @@ class Token(models.Model):
     # name=models.CharField(max_length=40)
 
 
-class ResponsibleIssue(models.Model):
-    responsible_issue_id=models.AutoField(primary_key=True,unique=True)
-    user = models.ForeignKey(User,related_name='responsibleIssue', on_delete=models.CASCADE)
-    department=models.ForeignKey(Department,related_name='responsibleIssue', on_delete=models.CASCADE)
-    responsible_issue_name=models.CharField(max_length=50)
 
-class Responsibility(models.Model):
 
-    Responsibility_id=models.AutoField(primary_key=True, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # issue= models.ForeignKey(Issue,related_name='responsibility', on_delete=models.CASCADE)
-    responsible_issue=models.OneToOneField(ResponsibleIssue,related_name='responsibility', on_delete=models.CASCADE)
-    responsibility_type=models.CharField(max_length=20)
+
 
 class Comment(models.Model):
     comment_id=models.AutoField(primary_key=True, unique=True)
-    user= models.ForeignKey(User, on_delete=models.CASCADE)
-    issue=models.ForeignKey(Issue, on_delete=models.CASCADE)
+    writer= models.ForeignKey(User,related_name='comment', on_delete=models.CASCADE)
+    issue=models.ForeignKey(Issue,related_name='comment', on_delete=models.CASCADE)
     parent=models.ForeignKey('self', related_name='reply', on_delete=models.CASCADE, null=True, blank=True)
     comment_content=models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # def __str__(self):
+    #     return str(self.writer.name)
 
 class Attachment(models.Model):
     attachment_id=models.AutoField(primary_key=True, unique=True)
@@ -98,14 +125,9 @@ class Attachment(models.Model):
     image = models.ImageField(upload_to='attachment', blank=True, null=True)
 
 class Subscribe(models.Model):
-    subscribe_id=models.AutoField(primary_key=True, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
+    id=models.AutoField(primary_key=True, unique=True)
+    subscriber = models.ForeignKey(User,related_name='subscriber', on_delete=models.CASCADE)
+    issue = models.ForeignKey(Issue,related_name='subscribe', on_delete=models.CASCADE)
+    flag =models.BooleanField(default=True)
 
-# class User(models.Model):
-#     user_id=models.CharField(primary_key=True,max_length=50,unique=True)
-#     email=models.EmailField(unique=True)
-#     # department=models.ForeignKey(Department, related_name='user',on_delete=models.CASCADE,null=True,blank=True)
-#     # responsibleIssue = models.OneToOneField(ResponsibleIssue,related_name='user', on_delete=models.SET_NULL,null=True)
-#     name=models.CharField(max_length=50,null=True)
-#     picture=models.URLField(max_length=2000,null=True)
+

@@ -19,7 +19,16 @@ jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_decode_handler = api_settings.JWT_DECODE_HANDLER
 jwt_get_username_from_payload = api_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER
 
+#사용자(디테일)
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=User
+        fields = ['username','name','picture']
 
+class WriterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=User
+        fields = ['name']
 #Access Token
 class JSONWebTokenSerializer(Serializer):
     def __init__(self, *args, **kwargs):
@@ -47,9 +56,22 @@ class JSONWebTokenSerializer(Serializer):
                     raise serializers.ValidationError(msg)
 
                 payload = jwt_payload_handler(user)
+                access_token= jwt_encode_handler(payload)
+                access_exp=api_settings.JWT_EXPIRATION_DELTA
+                access_exp = (access_exp.days * 24 * 3600 +
+                                access_exp.seconds)
+                new_payload=payload
+                refresh_limit=api_settings.JWT_REFRESH_EXPIRATION_DELTA
+                refresh_limit = (refresh_limit.days * 24 * 3600 +
+                                 refresh_limit.seconds)
+                orig_iat=payload.get('orig_iat')
+                new_payload['exp']=orig_iat+refresh_limit
+                refresh_token=jwt_encode_handler(new_payload)
                 return {
-                    'token': jwt_encode_handler(payload),
-                    'user': user
+                    'access_token': access_token,
+                    'refresh_token': refresh_token,
+                    'user': user,
+                    'exp':access_exp
                 }
             else:
                 msg = _('Unable to log in with provided credentials.')
@@ -121,7 +143,7 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
         payload = self._check_payload(token=token)
         user = self._check_user(payload=payload)
         orig_iat = payload.get('orig_iat')
-
+        print(payload)
         if orig_iat:
             # Verify expiration
             access_limit = api_settings.JWT_EXPIRATION_DELTA
@@ -143,11 +165,10 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
         new_payload = jwt_payload_handler(user)
         new_payload['orig_iat'] = orig_iat
         new_payload['exp'] = orig_iat + access_limit
-        print('액세스 리미트')
-        print(access_limit)
         return {
             'token': jwt_encode_handler(new_payload),
-            'user': user
+            'user': user,
+            'exp': access_limit
         }
 
 

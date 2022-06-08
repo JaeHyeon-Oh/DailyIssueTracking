@@ -116,3 +116,17 @@ def jwt_response_payload_handler(token, user=None, request=None):
     return {
         'token': token,
     }
+
+def jwt_obtain_response_payload_handler(access_token,refresh_token,exp, user=None, request=None):
+
+    return {
+        'access_token': access_token,
+        'refresh_token':refresh_token,
+        'exp':exp
+    }
+
+def jwt_verify_response_payload_handler(token,exp,user=None, request=None):
+    return{
+        'token': token,
+        'exp': exp
+    }
