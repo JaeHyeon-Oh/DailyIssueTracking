@@ -1,6 +1,5 @@
 from django.db import models
 from ITSJwt.models import User
-from django.db.models import Max
 
 
 class Project(models.Model):
@@ -9,11 +8,13 @@ class Project(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='owned_projects')
 
+
 class Board(models.Model):
     board_id= models.AutoField(primary_key=True,unique=True)
     project =models.ForeignKey(Project, related_name='board', on_delete=models.CASCADE)
     state=models.CharField(max_length=10, blank=False, null=False)
     order=models.IntegerField()
+
 
 #부서(IT실,경영지원,브랜드 전략,여신 관리)
 class Department(models.Model):
@@ -35,21 +36,19 @@ class Department(models.Model):
         default=IT,
     )
 
+
 class ResponsibleIssue(models.Model):
     responsible_issue_id=models.AutoField(primary_key=True,unique=True)
-    # user = models.ManyToManyField(User,related_name='responsibleIssue')
     department=models.ForeignKey(Department,related_name='responsibleIssue', on_delete=models.CASCADE)
     responsible_issue_name=models.CharField(max_length=50)
     def __str__(self):
         return self.responsible_issue_name
 
+
 class Responsibility(models.Model):
-
     user = models.ForeignKey(User,related_name='responsibility', on_delete=models.CASCADE)
-    responsible_issue=models.ForeignKey(ResponsibleIssue,on_delete=models.CASCADE)
+    responsible_issue=models.ForeignKey(ResponsibleIssue,related_name='responsibility',on_delete=models.CASCADE)
     order=models.IntegerField(default=3)
-
-
 
 
 class Issue(models.Model):
@@ -65,11 +64,8 @@ class Issue(models.Model):
 
     issue_id= models.AutoField(primary_key=True, unique=True)
     reporter =models.ForeignKey(User,related_name='issue',  on_delete=models.CASCADE)
-    # reporter=models.CharField(max_length=100)
-    # responsibility= models.ManyToManyField(Responsibility,related_name='issue')
     board =models.ForeignKey(Board, related_name='issue', on_delete=models.CASCADE)
     responsibleIssue =models.ForeignKey(ResponsibleIssue, related_name='issue', on_delete=models.CASCADE)
-
     title=models.CharField(max_length=100)
     content = models.TextField()
     # deadline = models.DateTimeField(auto_now=False)
@@ -81,30 +77,12 @@ class Issue(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # def save(self, *args, **kwargs):
-    #     filtered_objects = Issue.objects.filter(board=self.board)
-    #     if not self.order and filtered_objects.count() == 0:
-    #         self.order = 1
-    #     elif not self.order:
-    #         self.order = filtered_objects.aggregate(Max('order'))[
-    #             'order__max'] +1
-    #     return super().save(*args, **kwargs)
+
 
 class Assignee(models.Model):
     user = models.ForeignKey(User,related_name='assignee', on_delete=models.CASCADE)
     issue=models.ForeignKey(Issue,related_name='assignee', on_delete=models.CASCADE)
     mension=models.BooleanField(default=False)
-
-
-
-class Token(models.Model):
-    username=models.CharField(max_length=40,primary_key=True,unique=True)
-    key = models.CharField( max_length=40,unique=True)
-    # name=models.CharField(max_length=40)
-
-
-
-
 
 
 class Comment(models.Model):
@@ -116,17 +94,16 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # def __str__(self):
-    #     return str(self.writer.name)
 
 class Attachment(models.Model):
     attachment_id=models.AutoField(primary_key=True, unique=True)
     issue = models.ForeignKey(Issue,related_name='attachment', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='attachment', blank=True, null=True)
 
+
 class Subscribe(models.Model):
     id=models.AutoField(primary_key=True, unique=True)
-    subscriber = models.ForeignKey(User,related_name='subscriber', on_delete=models.CASCADE)
+    subscriber = models.ForeignKey(User,related_name='subscribed_user', on_delete=models.CASCADE)
     issue = models.ForeignKey(Issue,related_name='subscribe', on_delete=models.CASCADE)
     flag =models.BooleanField(default=True)
 

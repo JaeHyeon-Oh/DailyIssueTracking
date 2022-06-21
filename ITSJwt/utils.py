@@ -37,8 +37,6 @@ def jwt_payload_handler(user):
         'username': username,
         'exp': datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA
     }
-    # print('체크')
-    # print(datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA)
     if hasattr(user, 'email'):
         payload['email'] = user.email
     if isinstance(user.pk, uuid.UUID):
@@ -46,8 +44,6 @@ def jwt_payload_handler(user):
 
     payload[username_field] = username
 
-    # Include original issued at time for a brand new token,
-    # to allow token refresh
     if api_settings.JWT_ALLOW_REFRESH:
         payload['orig_iat'] = timegm(
             datetime.utcnow().utctimetuple()

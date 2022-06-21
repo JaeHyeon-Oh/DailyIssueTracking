@@ -1,16 +1,10 @@
-import jwt,json
-from slack_sdk.web import WebClient
-
-from django.conf import settings
+import jwt
 from django.contrib.auth import get_user_model
-from django.utils.encoding import smart_text
 from django.utils.translation import ugettext as _
 from rest_framework import exceptions
 from rest_framework.authentication import (
     BaseAuthentication, get_authorization_header
 )
-
-from .models import User
 
 
 def jwt_get_username_from_payload(payload):
@@ -20,31 +14,10 @@ def jwt_get_username_from_payload(payload):
     return payload.get('username')
 
 
-# def jwt_decode_handler(token):
-#     print('해독가능?')
-#     options = {
-#         'verify_exp': True,
-#     }
-#     # get user from token, BEFORE verification, to get user secret key
-#     # unverified_payload = jwt.decode(token, None, False)
-#     secret_key = 'default'
-#     return jwt.decode(
-#         token,
-#         secret_key,
-#         True,
-#         options=options,
-#         leeway=0,
-#         audience=None,
-#         issuer=None,
-#         algorithms=[settings.JWT_ALG]
-#     )
 def jwt_decode_handler(token):
     options = {
         'verify_exp': False,
     }
-    # get user from token, BEFORE verification, to get user secret key
-    # unverified_payload = jwt.decode(token, None, False)
-    # secret_key = jwt_get_secret_key(unverified_payload)
     return jwt.decode(
         token,
         'SECRET_KEY',

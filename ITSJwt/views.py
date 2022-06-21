@@ -1,9 +1,4 @@
-from rest_framework.reverse import reverse
-from rest_framework.views import APIView
-from rest_framework import status, generics
-from rest_framework.response import Response
-from datetime import datetime
-
+from rest_framework import generics
 from .settings import api_settings
 from .serializers import (
     JSONWebTokenSerializer, RefreshJSONWebTokenSerializer,
@@ -17,15 +12,8 @@ jwt_verify_response_payload_handler=api_settings.JWT_VERIFY_RESPONSE_PAYLOAD_HAN
 import datetime
 from slack_sdk.web import WebClient
 import json
-from django.conf import settings
-
-from ITSJwt.authentication import JSONWebTokenAuthentication
 from .models import User
-import jwt
 from rest_framework import permissions
-# from .serializers import MyTokenObtainPairSerializer
-from rest_framework.permissions import IsAuthenticated
-# from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
@@ -38,13 +26,12 @@ class UserList(generics.ListAPIView):
     serializer_class = UserSerializer
     name='user-list'
 
+
 class BackList(APIView):
     permission_classes = (permissions.AllowAny,)
     name='Back-List'
     queryset = User.objects.all()
-    # serializer_class = CustomUserSerializer
     fields = '__all__'
-
 
     def post(self,request):
         access_token=request.data.get('access_token')
@@ -55,9 +42,6 @@ class BackList(APIView):
         email = profile['email']
         name = profile['name']
         picture=profile['picture']
-        # user, created = User.objects.get_or_create(
-        #     username=username,
-        # )
         user=User.objects.filter(username=username).first()
         if not user:
             User.objects.create(
@@ -66,19 +50,14 @@ class BackList(APIView):
                 name=name,
                 picture=picture,
             )
-            return Response({"username": username, "name": name}, status=status.HTTP_201_CREATED)
+            return Response({"username": username, "name": name, "picture":picture}, status=status.HTTP_201_CREATED)
         else:
-            return Response({"username": username, "name": name}, status=status.HTTP_202_ACCEPTED)
+            return Response({"username": username, "name": name, "picture":picture}, status=status.HTTP_202_ACCEPTED)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
-
-
 class JSONWebTokenAPIView(APIView):
-
     permission_classes = ()
     authentication_classes = ()
     serializer_class = JSONWebTokenSerializer
@@ -111,8 +90,6 @@ class JSONWebTokenAPIView(APIView):
             exp=serializer.object.get('exp')
 
             response_data = jwt_obtain_response_payload_handler(access_token,refresh_token,exp, user, request)
-            # response_data = jwt_response_payload_handler(access_token, user, request)
-
             response = Response(response_data)
             if api_settings.JWT_AUTH_COOKIE:
                 expiration = (datetime.utcnow() +
@@ -139,13 +116,11 @@ class ObtainJSONWebToken(JSONWebTokenAPIView):
 
 class VerifyJSONWebToken(APIView):
 
-    # permission_classes = (IsAuthenticated,)
     """
     API View that checks the veracity of a token, returning the token if it
     is valid.
     """
 
-    # serializer_class = VerifyJSONWebTokenSerializer
     def post(self, request, *args, **kwargs):
         serializer=VerifyJSONWebTokenSerializer(data=request.data)
         if serializer.is_valid():
@@ -165,8 +140,8 @@ class VerifyJSONWebToken(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class RefreshJSONWebToken(APIView):
-    # permission_classes = (IsAuthenticated,)
     """
     API View that returns a refreshed token (with new expiration) based on
     existing token
@@ -174,7 +149,6 @@ class RefreshJSONWebToken(APIView):
     If 'orig_iat' field (original issued-at-time) is found, will first check
     if it's within expiration window, then copy it to the new token
     """
-    # serializer_class = RefreshJSONWebTokenSerializer
     def post(self, request, *args, **kwargs):
         serializer= RefreshJSONWebTokenSerializer(data=request.data)
         if serializer.is_valid():
@@ -192,6 +166,7 @@ class RefreshJSONWebToken(APIView):
             return response
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 obtain_jwt_token = ObtainJSONWebToken.as_view()
 refresh_jwt_token = RefreshJSONWebToken.as_view()

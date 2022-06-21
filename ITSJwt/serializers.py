@@ -1,16 +1,12 @@
 import jwt
-
 from calendar import timegm
 from datetime import datetime, timedelta
-
 from django.contrib.auth import  get_user_model
-from .authentication import BaseJSONWebTokenAuthentication
 from django.utils.translation import ugettext as _
 from rest_framework import serializers
 from .compat import Serializer
-
 from rest_framework_jwt.settings import api_settings
-from rest_framework_jwt.compat import get_username_field, PasswordField
+from rest_framework_jwt.compat import get_username_field
 from .backends import HashModelBackend
 
 User = get_user_model()
@@ -36,17 +32,14 @@ class JSONWebTokenSerializer(Serializer):
         super(JSONWebTokenSerializer, self).__init__(*args, **kwargs)
 
         self.fields[self.username_field] = serializers.CharField()
-        # self.fields['password'] = PasswordField(write_only=True)
 
     @property
     def username_field(self):
         return get_username_field()
 
     def validate(self, attrs):
-        # print(attrs)
         credentials = {
             self.username_field: attrs.get(self.username_field)
-            # 'password': attrs.get('password')
         }
         if all(credentials.values()):
             user = HashModelBackend.authenticate(self,username=attrs.get(self.username_field))
@@ -94,13 +87,8 @@ class VerificationBaseSerializer(Serializer):
         raise NotImplementedError(msg)
 
     def _check_payload(self, token):
-        # Check payload valid (based off of JSONWebTokenAuthentication,
-        # may want to refactor)
         try:
-            print('페이확인')
             payload = jwt_decode_handler(token)
-            print(payload)
-            print(payload['exp'])
         except jwt.ExpiredSignature:
             msg = _('Signature has expired.')
             raise serializers.ValidationError(msg)
@@ -137,13 +125,11 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
     """
 
     def validate(self, attrs):
-        print('토큰')
         token = attrs['token']
 
         payload = self._check_payload(token=token)
         user = self._check_user(payload=payload)
         orig_iat = payload.get('orig_iat')
-        print(payload)
         if orig_iat:
             # Verify expiration
             access_limit = api_settings.JWT_EXPIRATION_DELTA
@@ -182,21 +168,16 @@ class RefreshJSONWebTokenSerializer(VerificationBaseSerializer):
 
         payload = self._check_payload(token=token)
         user = self._check_user(payload=payload)
-        # Get and check 'orig_iat'
         orig_iat = payload.get('orig_iat')
 
         if orig_iat:
-            # Verify expiration
             refresh_limit = api_settings.JWT_REFRESH_EXPIRATION_DELTA
-            print('리미트')
-            print(refresh_limit)
             if isinstance(refresh_limit, timedelta):
                 refresh_limit = (refresh_limit.days * 24 * 3600 +
                                  refresh_limit.seconds)
 
             expiration_timestamp = orig_iat + int(refresh_limit)
             now_timestamp = timegm(datetime.utcnow().utctimetuple())
-            print(expiration_timestamp-now_timestamp)
             if now_timestamp > expiration_timestamp:
                 msg = _('Refresh has expired.')
                 raise serializers.ValidationError(msg)
@@ -207,7 +188,6 @@ class RefreshJSONWebTokenSerializer(VerificationBaseSerializer):
         new_payload = jwt_payload_handler(user)
         new_payload['orig_iat'] = orig_iat
         new_payload['exp'] = orig_iat+refresh_limit
-        print(orig_iat)
         return {
             'token': jwt_encode_handler(new_payload),
             'user': user

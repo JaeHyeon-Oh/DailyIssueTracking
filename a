@@ -1,0 +1,25 @@
+[33mcommit d68f52c5b78452c430ff7a3a79b4c9c1d9c346dc[m[33m ([m[1;36mHEAD -> [m[1;32mjwt[m[33m, [m[1;31morigin/jwt[m[33m)[m
+Author: oh <dhwogus1212@naver.com>
+Date:   Wed Jun 8 14:55:48 2022 +0900
+
+    Ownership Add
+
+[33mcommit 49f0b8810969d95e7f7b6873a38c6820d7b61c95[m
+Author: oh <dhwogus1212@naver.com>
+Date:   Mon May 23 11:16:20 2022 +0900
+
+    Social login+JWT
+
+[33mcommit a1faa4d8ecd916ba62e8ed3b99699a7e5a796965[m[33m ([m[1;32mmaster[m[33m)[m
+Author: oh <dhwogus1212@naver.com>
+Date:   Mon May 23 10:15:01 2022 +0900
+
+    Revert "Social login+ JWT complete"
+    
+    This reverts commit 5732050c3d156e7b6442015824efff949075e7c7.
+
+[33mcommit 5732050c3d156e7b6442015824efff949075e7c7[m
+Author: oh <dhwogus1212@naver.com>
+Date:   Mon May 23 09:57:25 2022 +0900
+
+    Social login+ JWT complete
